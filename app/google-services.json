@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "546844095480",
+    "firebase_url": "https://pladis.firebaseio.com",
+    "project_id": "pladis",
+    "storage_bucket": "pladis.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:546844095480:android:9a1bf149e271f25e431c0d",
+        "android_client_info": {
+          "package_name": "com.example.pladis"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "546844095480-fjk8807en6rb0adk0t7o74vmbqctuumt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnhbKlRy5N1IYZ2iOdaVCC33vJgX7nDX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "546844095480-fjk8807en6rb0adk0t7o74vmbqctuumt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

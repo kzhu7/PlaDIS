@@ -1,5 +1,7 @@
 apply plugin: 'com.android.application'
 
+apply plugin: 'com.google.gms.google-services'
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.2"
@@ -33,4 +35,5 @@ dependencies {
     // from firebase
     implementation 'com.google.mlkit:image-labeling-automl:16.2.0'
     implementation 'com.google.mlkit:linkfirebase:16.0.0'
+    implementation 'com.google.firebase:firebase-analytics:17.2.2'
 }
