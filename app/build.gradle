@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.pladis"
-        minSdkVersion 21
+        minSdkVersion defaultMinSdkVersion
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
