@@ -35,6 +35,18 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.mlkit.common.model.DownloadConditions;
+import com.google.mlkit.common.model.RemoteModelManager;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.automl.AutoMLImageLabelerOptions;
+import com.google.mlkit.vision.label.automl.AutoMLImageLabelerRemoteModel;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -66,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
     private CaptureRequest.Builder captureRequestBuilder;
     private Size imageDimension;
     private ImageReader imageReader;
+    private AutoMLImageLabelerRemoteModel remoteModel;
+    private ImageLabeler imageLabeler;
 
     //Save to FILE
     private File file;
@@ -104,12 +118,26 @@ public class MainActivity extends AppCompatActivity {
         assert textureView != null;
         textureView.setSurfaceTextureListener(textureListener);
         btnCapture = (ImageButton)findViewById(R.id.btnCapture);
-        btnCapture.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                takePicture();
-            }
-        });
+        remoteModel = new AutoMLImageLabelerRemoteModel.Builder("PlaDISv1").build();
+        DownloadConditions downloadConditions = new DownloadConditions.Builder()
+                .requireWifi()
+                .build();
+        RemoteModelManager.getInstance().download(remoteModel, downloadConditions)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void v) {
+                        // Download complete. Depending on your app, you could enable
+                        // the ML feature, or switch from the local model to the remote
+                        // model, etc.
+                        btnCapture.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                takePicture();
+                            }
+                        });
+                    }
+                });
+        createDetector(remoteModel);
     }
 
     private void takePicture() {
@@ -141,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
 
             //Check orientation base on device
-            int rotation = getWindowManager().getDefaultDisplay().getRotation();
+            final int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION,ORIENTATIONS.get(rotation));
 
             file = new File(Environment.getExternalStorageDirectory()+"/"+UUID.randomUUID().toString()+".jpg");
@@ -151,37 +179,60 @@ public class MainActivity extends AppCompatActivity {
                     Image image = null;
                     try{
                         image = reader.acquireLatestImage();
-                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                        byte[] bytes = new byte[buffer.capacity()];
-                        buffer.get(bytes);
-                        save(bytes);
-
+//                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+//                        byte[] bytes = new byte[buffer.capacity()];
+//                        buffer.get(bytes);
+//                        save(bytes);
+                        if (image != null) {
+                            InputImage inputImage =
+                                    InputImage.fromMediaImage(image, rotation);
+                            // Pass image to an ML Kit Vision API
+                            // ...
+                            imageLabeler.process(inputImage)
+                                    .addOnSuccessListener(new OnSuccessListener<List<ImageLabel>>() {
+                                        @Override
+                                        public void onSuccess(List<ImageLabel> labels) {
+                                            // Task completed successfully
+                                            // ...
+                                            for (ImageLabel label : labels) {
+                                                String text = label.getText();
+                                                float confidence = label.getConfidence();
+                                                System.out.println(text + " " + confidence);
+                                                int index = label.getIndex();
+                                            }
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            // Task failed with an exception
+                                            // ...
+                                            System.out.println("FAILED");
+                                        }
+                                    });
+                        }
                     }
-                    catch (FileNotFoundException e)
-                    {
-                        e.printStackTrace();
-                    }
-                    catch (IOException e)
+                    catch (Exception e)
                     {
                         e.printStackTrace();
                     }
                     finally {
                         {
-                            if(image != null)
+                            if (image != null)
                                 image.close();
                         }
                     }
                 }
-                private void save(byte[] bytes) throws IOException {
-                    OutputStream outputStream = null;
-                    try{
-                        outputStream = new FileOutputStream(file);
-                        outputStream.write(bytes);
-                    }finally {
-                        if(outputStream != null)
-                            outputStream.close();
-                    }
-                }
+//                private void save(byte[] bytes) throws IOException {
+//                    OutputStream outputStream = null;
+//                    try{
+//                        outputStream = new FileOutputStream(file);
+//                        outputStream.write(bytes);
+//                    }finally {
+//                        if(outputStream != null)
+//                            outputStream.close();
+//                    }
+//                }
             };
 
             reader.setOnImageAvailableListener(readerListener,mBackgroundHandler);
@@ -214,6 +265,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private void createDetector(AutoMLImageLabelerRemoteModel remoteModel) {
+        AutoMLImageLabelerOptions options =
+                new AutoMLImageLabelerOptions.Builder(remoteModel).setConfidenceThreshold(0).build();
+        System.out.println("Created AutoMLImageLabelerImpl.");
+
+        imageLabeler = ImageLabeling.getClient(options);
     }
 
     private void createCameraPreview() {
