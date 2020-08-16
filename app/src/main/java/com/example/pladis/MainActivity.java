@@ -197,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                         if (image != null) {
                             InputImage inputImage =
                                     InputImage.fromMediaImage(image, rotation);
+                            System.out.println("Got input image");
                             // Pass image to an ML Kit Vision API
                             // ...
                             imageLabeler.process(inputImage)
@@ -219,6 +220,7 @@ public class MainActivity extends AppCompatActivity {
                                             // Task failed with an exception
                                             // ...
                                             System.out.println("FAILED");
+                                            System.out.println(e);
                                         }
                                     });
                         }
@@ -226,12 +228,6 @@ public class MainActivity extends AppCompatActivity {
                     catch (Exception e)
                     {
                         e.printStackTrace();
-                    }
-                    finally {
-                        {
-                            if (image != null)
-                                image.close();
-                        }
                     }
                 }
                 private void save(byte[] bytes) throws IOException {
