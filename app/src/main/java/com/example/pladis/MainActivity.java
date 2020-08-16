@@ -29,6 +29,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -47,7 +48,7 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button btnCapture;
+    private ImageButton btnCapture;
     private TextureView textureView;
 
     //Check state orientation of output image
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         //From Java 1.4 , you can use keyword 'assert' to check expression true or false
         assert textureView != null;
         textureView.setSurfaceTextureListener(textureListener);
-        btnCapture = (Button)findViewById(R.id.btnCapture);
+        btnCapture = (ImageButton)findViewById(R.id.btnCapture);
         btnCapture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
