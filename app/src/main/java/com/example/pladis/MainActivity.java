@@ -129,6 +129,16 @@ public class MainActivity extends AppCompatActivity {
                         // Download complete. Depending on your app, you could enable
                         // the ML feature, or switch from the local model to the remote
                         // model, etc.
+                        AutoMLImageLabelerOptions.Builder optionsBuilder;
+                        optionsBuilder = new AutoMLImageLabelerOptions.Builder(remoteModel);
+                        AutoMLImageLabelerOptions options = optionsBuilder
+                                .setConfidenceThreshold(0.0f)  // Evaluate your model in the Firebase console
+                                // to determine an appropriate threshold.
+                                .build();
+
+                        imageLabeler = ImageLabeling.getClient(options);
+                        System.out.println("Image labeler created");
+
                         btnCapture.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
@@ -137,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                     }
                 });
-        createDetector(remoteModel);
+        // createDetector(remoteModel);
     }
 
     private void takePicture() {
@@ -159,13 +169,13 @@ public class MainActivity extends AppCompatActivity {
                 width = jpegSizes[0].getWidth();
                 height = jpegSizes[0].getHeight();
             }
-            final ImageReader reader = ImageReader.newInstance(width,height,ImageFormat.YUV_420_888,1);
+            imageReader = ImageReader.newInstance(width,height,ImageFormat.YUV_420_888,2);
             List<Surface> outputSurface = new ArrayList<>(2);
-            outputSurface.add(reader.getSurface());
+            outputSurface.add(imageReader.getSurface());
             outputSurface.add(new Surface(textureView.getSurfaceTexture()));
 
             final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilder.addTarget(reader.getSurface());
+            captureBuilder.addTarget(imageReader.getSurface());
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
 
             //Check orientation base on device
@@ -178,11 +188,12 @@ public class MainActivity extends AppCompatActivity {
                 public void onImageAvailable(ImageReader imageReader) {
                     Image image = null;
                     try{
-                        image = reader.acquireLatestImage();
-//                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-//                        byte[] bytes = new byte[buffer.capacity()];
-//                        buffer.get(bytes);
-//                        save(bytes);
+                        image = imageReader.acquireLatestImage();
+                        System.out.println("Acquire latest image");
+                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                        byte[] bytes = new byte[buffer.capacity()];
+                        buffer.get(bytes);
+                        // save(bytes);
                         if (image != null) {
                             InputImage inputImage =
                                     InputImage.fromMediaImage(image, rotation);
@@ -223,19 +234,19 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
-//                private void save(byte[] bytes) throws IOException {
-//                    OutputStream outputStream = null;
-//                    try{
-//                        outputStream = new FileOutputStream(file);
-//                        outputStream.write(bytes);
-//                    }finally {
-//                        if(outputStream != null)
-//                            outputStream.close();
-//                    }
-//                }
+                private void save(byte[] bytes) throws IOException {
+                    OutputStream outputStream = null;
+                    try{
+                        outputStream = new FileOutputStream(file);
+                        outputStream.write(bytes);
+                    }finally {
+                        if(outputStream != null)
+                            outputStream.close();
+                    }
+                }
             };
 
-            reader.setOnImageAvailableListener(readerListener,mBackgroundHandler);
+            imageReader.setOnImageAvailableListener(readerListener,mBackgroundHandler);
             final CameraCaptureSession.CaptureCallback captureListener = new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
@@ -267,12 +278,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void createDetector(AutoMLImageLabelerRemoteModel remoteModel) {
-        AutoMLImageLabelerOptions options =
-                new AutoMLImageLabelerOptions.Builder(remoteModel).setConfidenceThreshold(0).build();
-        System.out.println("Created AutoMLImageLabelerImpl.");
+    private void createDetector(final AutoMLImageLabelerRemoteModel remoteModel) {
+        System.out.println(RemoteModelManager.getInstance().isModelDownloaded(remoteModel));
+        RemoteModelManager.getInstance().isModelDownloaded(remoteModel)
+                .addOnSuccessListener(new OnSuccessListener<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean isDownloaded) {
+                        if (isDownloaded) {
+                            AutoMLImageLabelerOptions.Builder optionsBuilder;
+                            optionsBuilder = new AutoMLImageLabelerOptions.Builder(remoteModel);
+                            AutoMLImageLabelerOptions options = optionsBuilder
+                                    .setConfidenceThreshold(0.0f)  // Evaluate your model in the Firebase console
+                                    // to determine an appropriate threshold.
+                                    .build();
 
-        imageLabeler = ImageLabeling.getClient(options);
+                            imageLabeler = ImageLabeling.getClient(options);
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        System.out.println("Create image labeler failed (createDetector)");
+                    }
+                });
     }
 
     private void createCameraPreview() {
