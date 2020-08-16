@@ -2,6 +2,7 @@ package com.example.pladis;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -32,6 +33,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -52,7 +54,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageButton btnCapture;
     private TextureView textureView;
+
+    private static DecimalFormat df = new DecimalFormat("0.00");
 
     //Check state orientation of output image
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -205,13 +211,36 @@ public class MainActivity extends AppCompatActivity {
                                         @Override
                                         public void onSuccess(List<ImageLabel> labels) {
                                             // Task completed successfully
-                                            // ...
-                                            for (ImageLabel label : labels) {
-                                                String text = label.getText();
-                                                float confidence = label.getConfidence();
+
+                                            List<List<String>> table = new ArrayList<>();
+                                            for (int i = 0; i < 3; i++) {
+                                                String text = labels.get(i).getText();
+                                                float confidence = labels.get(i).getConfidence();
+                                                String[] arr = text.split("_");
+                                                String plant = "";
+                                                for (String token : arr) {
+                                                    String capitalized = token.substring(0, 1).toUpperCase() + token.substring(1);
+                                                    plant += capitalized + " ";
+                                                }
+                                                table.add(Arrays.asList(plant.trim(), df.format(confidence * 100) + "%"));
                                                 System.out.println(text + " " + confidence);
-                                                int index = label.getIndex();
+                                                int index = labels.get(i).getIndex();
                                             }
+                                            String message = formatAsTable(table);
+                                            new AlertDialog.Builder(MainActivity.this)
+                                                    .setTitle("Results")
+                                                    .setMessage(message)
+
+                                                    // Specifying a listener allows you to take an action before dismissing the dialog.
+                                                    // The dialog is automatically dismissed when a dialog button is clicked.
+                                                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                                                        public void onClick(DialogInterface dialog, int which) {
+                                                            // Continue with delete operation
+                                                        }
+                                                    })
+
+                                                    .setIcon(android.R.drawable.ic_menu_info_details)
+                                                    .show();
                                         }
                                     })
                                     .addOnFailureListener(new OnFailureListener() {
@@ -272,6 +301,32 @@ public class MainActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public static String formatAsTable(List<List<String>> rows)
+    {
+        int[] maxLengths = new int[rows.get(0).size()];
+        for (List<String> row : rows)
+        {
+            for (int i = 0; i < row.size(); i++)
+            {
+                maxLengths[i] = Math.max(maxLengths[i], row.get(i).length());
+            }
+        }
+
+        StringBuilder formatBuilder = new StringBuilder();
+        for (int maxLength : maxLengths)
+        {
+            formatBuilder.append("%-").append(maxLength + 2).append("s");
+        }
+        String format = formatBuilder.toString();
+
+        StringBuilder result = new StringBuilder();
+        for (List<String> row : rows)
+        {
+            result.append(String.format(format, row.toArray(new String[0]))).append("\n\n");
+        }
+        return result.toString();
     }
 
     private void createDetector(final AutoMLImageLabelerRemoteModel remoteModel) {
